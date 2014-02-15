@@ -21,8 +21,8 @@ static inline void test_hash_func(const char* buf, int len)
     int i;
 
     for (i = 0; hash_func_table[i].func; ++i)
-    printf("%s(\"%s\")\t=\t%lu\n", hash_func_table[i].name, buf,
-           hash_func_table[i].func(buf, len));
+        printf("%s(\"%s\")\t=\t%lu\n", hash_func_table[i].name, buf,
+               hash_func_table[i].func(buf, len));
 }
 
 int main(void)
