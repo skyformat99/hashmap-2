@@ -1,4 +1,4 @@
-unsigned long simple_hash11(const char* begin, unsigned len)
+unsigned long simple_hash11(const char* begin, unsigned int len)
 {
     register const char* end;
     register unsigned long hash = 0;
@@ -9,7 +9,7 @@ unsigned long simple_hash11(const char* begin, unsigned len)
     return hash;
 }
 
-unsigned long simple_hash31(const char* begin, unsigned len)
+unsigned long simple_hash31(const char* begin, unsigned int len)
 {
     register const char* end;
     register unsigned long hash = 0;
@@ -20,7 +20,7 @@ unsigned long simple_hash31(const char* begin, unsigned len)
     return hash;
 }
 
-unsigned long djb_hash(const char* begin, unsigned len)
+unsigned long djb_hash(const char* begin, unsigned int len)
 {
     register const char* end;
     register unsigned long hash = 5381;
@@ -31,7 +31,7 @@ unsigned long djb_hash(const char* begin, unsigned len)
     return hash;
 }
 
-unsigned long sdbm_hash(const char* begin, unsigned len)
+unsigned long sdbm_hash(const char* begin, unsigned int len)
 {
     register const char* end;
     register unsigned long hash = 0;
@@ -42,7 +42,7 @@ unsigned long sdbm_hash(const char* begin, unsigned len)
     return hash;
 }
 
-unsigned long dek_hash(const char* begin, unsigned len)
+unsigned long dek_hash(const char* begin, unsigned int len)
 {
     register const char* end;
     register unsigned long hash = len;
@@ -53,7 +53,7 @@ unsigned long dek_hash(const char* begin, unsigned len)
     return hash;
 }
 
-unsigned long bp_hash(const char* begin, unsigned len)
+unsigned long bp_hash(const char* begin, unsigned int len)
 {
     register const char* end;
     register unsigned long hash = 0;
@@ -64,7 +64,7 @@ unsigned long bp_hash(const char* begin, unsigned len)
     return hash;
 }
 
-unsigned long pjw_hash(const char* begin, unsigned len)
+unsigned long pjw_hash(const char* begin, unsigned int len)
 {
     register const char* end;
     register unsigned long g, hash = 0;

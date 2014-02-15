@@ -2,7 +2,7 @@
 using namespace std;
 
 #include "myhashmap.hpp"
-#include "../mystring/mystring.hpp"
+#include <mystring.hpp>
 
 using myutils::MyHashMap;
 using myutils::MyString;
