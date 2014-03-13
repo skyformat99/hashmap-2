@@ -1,5 +1,12 @@
 CXX := g++
-CXXFLAGS := -O2 -Wall -Werror -std=c++0x
+
+ifeq ($(release), y)
+    CXXFLAGS := -O2 -DNDEBUG
+else
+    CXXFLAGS := -g
+endif
+
+CXXFLAGS := $(CXXFLAGS) -Wall -Werror -std=c++0x
 
 INCLUDE := -I../../mystring
 LIBS := -lpthread
@@ -7,13 +14,13 @@ LIBS := -lpthread
 OBJS := $(patsubst %.cpp, %.o, $(wildcard *.cpp)) \
     $(patsubst %.cpp, %.o, $(wildcard ../../mystring/mystring.cpp))
 
-TARGET := test-hash
+TARGET := test_hash
 
 .PHONY: all clean
 
 all: $(TARGET)
 
-test-hash: $(OBJS)
+$(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 .cpp.o:

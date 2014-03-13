@@ -1,14 +1,21 @@
 CC := gcc
-CFLAGS := -O2 -Wall -Werror
+
+ifeq ($(release), y)
+    CFLAGS := -O2 -DNDEBUG
+else
+    CFLAGS := -g
+endif
+
+CFLAGS := $(CFLAGS) -Wall -Werror
 OBJS := $(patsubst %.c, %.o, $(wildcard *.c))
 
-TARGET := test-hash-func
+TARGET := test_hash_func
 
 .PHONY: all clean
 
 all: $(TARGET)
 
-test-hash-func: $(OBJS)
+$(TARGET): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 .c.o:
