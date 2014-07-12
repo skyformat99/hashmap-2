@@ -8,11 +8,10 @@ endif
 
 CXXFLAGS := $(CXXFLAGS) -Wall -Werror -std=c++0x
 
-INCLUDE := -I../../mystring
-LIBS := -lpthread
+INCLUDE :=
+LIBS :=
 
-OBJS := $(patsubst %.cpp, %.o, $(wildcard *.cpp)) \
-    $(patsubst %.cpp, %.o, $(wildcard ../../mystring/mystring.cpp))
+OBJS := $(patsubst %.cpp, %.o, $(wildcard *.cpp))
 
 TARGET := test_hash
 

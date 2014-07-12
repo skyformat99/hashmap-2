@@ -3,14 +3,33 @@
 
 #include <list>
 #include <vector>
-#include <utility> // std::std::pair
-#include <pthread.h>
+#include <utility> // std::pair
 
 #define MAX_NR_SLOT 999983
 
-namespace MyUtils {
+namespace myutils {
 
-template<typename KeyType, typename ValueType>
+class MyHashLock {
+
+    public:
+
+        virtual void rd_lock() = 0;
+        virtual void wr_lock() = 0;
+        virtual void rd_unlock() = 0;
+        virtual void wr_unlock() = 0;
+};
+
+class MyNullHashLock : public MyHashLock {
+
+    public:
+
+        void rd_lock() {}
+        void wr_lock() {}
+        void rd_unlock() {}
+        void wr_unlock() {}
+};
+
+template<typename KeyType, typename ValueType, typename LockType = MyNullHashLock>
 class MyHashMap {
 
     public:
@@ -22,26 +41,29 @@ class MyHashMap {
                 virtual bool process(const KeyType&, ValueType&) = 0;
         };
 
+        class SlotIterator {
+
+            public:
+
+                virtual bool process(unsigned int slot,
+                                     const std::list<std::pair<KeyType, ValueType>>& itemlist) = 0;
+        };
+
     public:
 
         MyHashMap(unsigned int slots = 0)
         {
+            m_items = 0;
             m_slots = (slots > 0) ? slots : MAX_NR_SLOT;
 
             m_table.resize(m_slots);
-            for (auto i = m_table.begin(); i != m_table.end(); ++i)
-                pthread_rwlock_init(&i->lock, nullptr);
-
-            m_nr_item = 0;
         }
 
-        virtual ~MyHashMap()
-        {
-            for (auto i = m_table.begin(); i != m_table.end(); ++i)
-                pthread_rwlock_destroy(&i->lock);
-        }
+        virtual ~MyHashMap() {}
 
-        unsigned long size() const { return m_nr_item; }
+        unsigned long size() const { return m_items; }
+
+        unsigned int slots() const { return m_slots; }
 
         bool insert(const KeyType& key, const ValueType& value,
                     bool replace = false)
@@ -49,7 +71,7 @@ class MyHashMap {
             unsigned int slot = hash(key) % m_slots;
 
             WRLock lock(m_table[slot].lock);
-            return doInsert(key, value, slot, replace);
+            return doInsert(slot, key, value, replace);
         }
 
         void remove(const KeyType& key)
@@ -57,15 +79,15 @@ class MyHashMap {
             unsigned int slot = hash(key) % m_slots;
 
             WRLock lock(m_table[slot].lock);
-            doRemove(key, slot);
+            doRemove(slot, key);
         }
 
-        ValueType lookup(const KeyType& key)
+        bool lookup(const KeyType& key, ValueType& value)
         {
             unsigned int slot = hash(key) % m_slots;
 
             RDLock lock(m_table[slot].lock);
-            return doLookup(key, slot);
+            return doLookup(slot, key, value);
         }
 
         bool foreach(Iterator& o)
@@ -76,6 +98,19 @@ class MyHashMap {
                     if (!o.process(j->first, j->second))
                         return false;
                 }
+            }
+
+            return true;
+        }
+
+        bool foreach(SlotIterator& o)
+        {
+            for (unsigned int i = 0; i < m_table.size(); ++i) {
+                HashHead& head = m_table[i];
+
+                RDLock lock(head.lock);
+                if (!o.process(i, head.itemlist))
+                    return false;
             }
 
             return true;
@@ -92,8 +127,8 @@ class MyHashMap {
 
     private:
 
-        bool doInsert(const KeyType& key, const ValueType& value,
-                      unsigned long slot, bool replace)
+        bool doInsert(unsigned long slot, const KeyType& key, const ValueType& value,
+                      bool replace)
         {
             std::list<std::pair<KeyType, ValueType>>& itemlist = m_table[slot].itemlist;
 
@@ -108,33 +143,35 @@ class MyHashMap {
             }
 
             itemlist.push_front(std::pair<KeyType, ValueType>(key, value));
-            __sync_add_and_fetch(&m_nr_item, 1);
+            __sync_add_and_fetch(&m_items, 1);
             return true;
         }
 
-        void doRemove(const KeyType& key, unsigned long slot)
+        void doRemove(unsigned long slot, const KeyType& key)
         {
             std::list<std::pair<KeyType, ValueType>>& itemlist = m_table[slot].itemlist;
 
             for (auto i = itemlist.begin(); i != itemlist.end(); ++i) {
                 if (equal(key, i->first)) {
                     itemlist.erase(i);
-                    __sync_sub_and_fetch(&m_nr_item, 1);
+                    __sync_sub_and_fetch(&m_items, 1);
                     return;
                 }
             }
         }
 
-        ValueType doLookup(const KeyType& key, unsigned long slot)
+        ValueType doLookup(unsigned long slot, const KeyType& key, ValueType& value)
         {
             std::list<std::pair<KeyType, ValueType>>& itemlist = m_table[slot].itemlist;
 
             for (auto i = itemlist.begin(); i != itemlist.end(); ++i) {
-                if (equal(key, i->first))
-                    return i->second;
+                if (equal(key, i->first)) {
+                    value = i->second;
+                    return true;
+                }
             }
 
-            return ValueType();
+            return false;
         }
 
     private:
@@ -143,50 +180,52 @@ class MyHashMap {
 
             public:
 
-                RDLock(pthread_rwlock_t& lock_)
+                RDLock(LockType& lock_)
                     : m_lock(lock_)
                 {
-                    pthread_rwlock_rdlock(&lock_);
+                    m_lock.rd_lock();
                 }
 
                 ~RDLock()
                 {
-                    pthread_rwlock_unlock(&m_lock);
+                    m_lock.rd_unlock();
                 }
 
             private:
 
-                pthread_rwlock_t& m_lock;
+                LockType& m_lock;
         };
 
         class WRLock {
 
             public:
 
-                WRLock(pthread_rwlock_t& lock_)
+                WRLock(LockType& lock_)
                     : m_lock(lock_)
                 {
-                    pthread_rwlock_wrlock(&lock_);
+                    m_lock.wr_lock();
                 }
 
                 ~WRLock()
                 {
-                    pthread_rwlock_unlock(&m_lock);
+                    m_lock.wr_unlock();
                 }
 
             private:
 
-                pthread_rwlock_t& m_lock;
+                LockType& m_lock;
         };
 
+    private:
+
         struct HashHead {
-            pthread_rwlock_t lock;
+            LockType lock;
             std::list<std::pair<KeyType, ValueType>> itemlist;
         };
 
     private:
 
-        unsigned long m_nr_item;
+        unsigned long m_items;
         unsigned int m_slots;
         std::vector<HashHead> m_table;
 };

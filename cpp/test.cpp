@@ -2,10 +2,7 @@
 using namespace std;
 
 #include "myhashmap.hpp"
-#include <mystring.hpp>
-
-using MyUtils::MyHashMap;
-using MyUtils::MyString;
+using namespace myutils;
 
 /* ------------------------------------------------------------------------- */
 
@@ -33,24 +30,24 @@ class TestIterator : public MyHashMap<KeyType, ValueType>::Iterator {
 
 int main(void)
 {
-    int key;
-    NumHashMap<int, string> m;
+    int key, value;
+    NumHashMap<int, int> m;
 
     for (key = 0; key < 10; ++key)
-        m.insert(key, MyString(key));
+        m.insert(key, key);
 
     key = 5;
-    auto res = m.lookup(key);
-    if (res.empty())
+    bool state = m.lookup(key, value);
+    if (!state)
         cout << "cannot find -> " << key << endl;
     else {
-        cout << "find -> " << res << endl;
-        m.insert(key, MyString(key + key), true);
-        res = m.lookup(key);
-        cout << "find -> " << res << endl;
+        cout << "find -> " << value << endl;
+        m.insert(key, key + key, true);
+        m.lookup(key, value);
+        cout << "find -> " << value << endl;
     }
 
-    TestIterator<int, string> iter;
+    TestIterator<int, int> iter;
     m.foreach(iter);
 
     return 0;
