@@ -12,6 +12,7 @@ class NumHashMap : public MyHashMap<NumKeyType, ValueType> {
     protected:
 
         unsigned long hash(const NumKeyType& key) const { return key; }
+        bool equal(const NumKeyType& a, const NumKeyType& b) const { return (a == b); }
 };
 
 template<typename KeyType, typename ValueType>
@@ -30,7 +31,7 @@ class TestIterator : public MyHashMap<KeyType, ValueType>::Iterator {
 
 int main(void)
 {
-    int key, value;
+    int key, value = 0;
     NumHashMap<int, int> m;
 
     for (key = 0; key < 10; ++key)
