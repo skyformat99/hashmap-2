@@ -1,9 +1,29 @@
+CXX := g++
+
+ifeq ($(release), y)
+    CXXFLAGS := -O2 -DNDEBUG
+else
+    CXXFLAGS := -g
+endif
+
+CXXFLAGS := $(CXXFLAGS) -Wall -Werror -std=c++0x
+
+INCLUDE :=
+LIBS := -pthread
+
+OBJS := $(patsubst %.cpp, %.o, $(wildcard *.cpp))
+
+TARGET := test_myhashmap
+
 .PHONY: all clean
 
-all:
-	$(MAKE) -C c
-	$(MAKE) -C cpp
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
+
+.cpp.o:
+	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -o $@
 
 clean:
-	$(MAKE) clean -C cpp
-	$(MAKE) clean -C c
+	rm -f $(TARGET) $(OBJS)

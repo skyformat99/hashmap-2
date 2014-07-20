@@ -6,21 +6,25 @@ using namespace myutils;
 
 /* ------------------------------------------------------------------------- */
 
-template<typename NumKeyType, typename ValueType>
-class NumHashMap : public MyHashMap<NumKeyType, ValueType> {
-
-    protected:
-
-        unsigned long hash(const NumKeyType& key) const { return key; }
-        bool equal(const NumKeyType& a, const NumKeyType& b) const { return (a == b); }
-};
-
-template<typename KeyType, typename ValueType>
-class TestIterator : public MyHashMap<KeyType, ValueType>::Iterator {
+class NumHashMap : public MyHashMap<int, int, MyPthreadSpinLock> {
 
     public:
 
-        bool process(const KeyType& key, ValueType& value)
+        NumHashMap()
+            : MyHashMap<int, int, MyPthreadSpinLock>(11)
+        {}
+
+    protected:
+
+        unsigned long hash(const int& key) const { return key; }
+        bool equal(const int& a, const int& b) const { return (a == b); }
+};
+
+class TestIterator : public NumHashMap::Iterator {
+
+    public:
+
+        bool process(const int& key, int& value)
         {
             cout << "get " << key << ":" << value << endl;
             return true;
@@ -32,7 +36,7 @@ class TestIterator : public MyHashMap<KeyType, ValueType>::Iterator {
 int main(void)
 {
     int key, value = 0;
-    NumHashMap<int, int> m;
+    NumHashMap m;
 
     for (key = 0; key < 10; ++key)
         m.insert(key, key);
@@ -48,7 +52,7 @@ int main(void)
         cout << "find -> " << value << endl;
     }
 
-    TestIterator<int, int> iter;
+    TestIterator iter;
     m.foreach(iter);
 
     return 0;
