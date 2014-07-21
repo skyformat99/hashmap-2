@@ -194,20 +194,45 @@ class MyHashMap {
             return doInsert(slot, key, value, replace);
         }
 
-        void remove(const KeyType& key)
+        bool remove(const KeyType& key, ValueType* value = NULL)
         {
             unsigned int slot = hash(key) % m_slots;
 
             WRLock lock(&(m_table[slot].lock));
-            doRemove(slot, key);
+            return doRemove(slot, key, value);
         }
 
-        bool lookup(const KeyType& key, ValueType& value)
+        bool lookup(const KeyType& key, ValueType* value = NULL)
         {
             unsigned int slot = hash(key) % m_slots;
 
             RDLock lock(&(m_table[slot].lock));
             return doLookup(slot, key, value);
+        }
+
+        void clear()
+        {
+            for (auto i = m_table.begin(); i != m_table.end(); ++i) {
+                WRLock lock(&(i->lock));
+                i->itemlist.clear();
+            }
+        }
+
+        bool clear(SlotIterator& o)
+        {
+            for (unsigned int i = 0; i < m_table.size(); ++i) {
+                HashHead& head = m_table[i];
+
+                if (!head.itemlist.empty()) {
+                    WRLock lock(&(head.lock));
+                    if (!o.process(i, head.itemlist))
+                        return false;
+
+                    head.itemlist.clear();
+                }
+            }
+
+            return true;
         }
 
         bool foreach(Iterator& o)
@@ -228,9 +253,11 @@ class MyHashMap {
             for (unsigned int i = 0; i < m_table.size(); ++i) {
                 HashHead& head = m_table[i];
 
-                RDLock lock(&(head.lock));
-                if (!o.process(i, head.itemlist))
-                    return false;
+                if (!head.itemlist.empty()) {
+                    RDLock lock(&(head.lock));
+                    if (!o.process(i, head.itemlist))
+                        return false;
+                }
             }
 
             return true;
@@ -263,26 +290,33 @@ class MyHashMap {
             return true;
         }
 
-        void doRemove(unsigned long slot, const KeyType& key)
+        bool doRemove(unsigned long slot, const KeyType& key, ValueType* value)
         {
             std::list<std::pair<KeyType, ValueType>>& itemlist = m_table[slot].itemlist;
 
             for (auto i = itemlist.begin(); i != itemlist.end(); ++i) {
                 if (equal(key, i->first)) {
+                    if (value)
+                        *value = i->second;
+
                     itemlist.erase(i);
                     __sync_sub_and_fetch(&m_items, 1);
-                    return;
+                    return true;
                 }
             }
+
+            return false; // not found
         }
 
-        bool doLookup(unsigned long slot, const KeyType& key, ValueType& value)
+        bool doLookup(unsigned long slot, const KeyType& key, ValueType* value)
         {
             std::list<std::pair<KeyType, ValueType>>& itemlist = m_table[slot].itemlist;
 
             for (auto i = itemlist.begin(); i != itemlist.end(); ++i) {
                 if (equal(key, i->first)) {
-                    value = i->second;
+                    if (value)
+                        *value = i->second;
+
                     return true;
                 }
             }

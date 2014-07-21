@@ -42,13 +42,13 @@ int main(void)
         m.insert(key, key);
 
     key = 5;
-    bool state = m.lookup(key, value);
+    bool state = m.lookup(key, &value);
     if (!state)
         cout << "cannot find -> " << key << endl;
     else {
         cout << "find -> " << value << endl;
         m.insert(key, key + key, true);
-        m.lookup(key, value);
+        m.lookup(key, &value);
         cout << "find -> " << value << endl;
     }
 
