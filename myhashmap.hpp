@@ -166,7 +166,7 @@ class MyHashMap {
             public:
 
                 virtual bool process(unsigned int slot,
-                                     const std::list<std::pair<KeyType, ValueType>>& itemlist) = 0;
+                                     std::list<std::pair<const KeyType, ValueType>>& itemlist) = 0;
         };
 
     public:
@@ -273,7 +273,7 @@ class MyHashMap {
         bool doInsert(unsigned long slot, const KeyType& key, const ValueType& value,
                       bool replace)
         {
-            std::list<std::pair<KeyType, ValueType>>& itemlist = m_table[slot].itemlist;
+            std::list<std::pair<const KeyType, ValueType>>& itemlist = m_table[slot].itemlist;
 
             for (auto i = itemlist.begin(); i != itemlist.end(); ++i) {
                 if (equal(key, i->first)) {
@@ -292,7 +292,7 @@ class MyHashMap {
 
         bool doRemove(unsigned long slot, const KeyType& key, ValueType* value)
         {
-            std::list<std::pair<KeyType, ValueType>>& itemlist = m_table[slot].itemlist;
+            std::list<std::pair<const KeyType, ValueType>>& itemlist = m_table[slot].itemlist;
 
             for (auto i = itemlist.begin(); i != itemlist.end(); ++i) {
                 if (equal(key, i->first)) {
@@ -310,7 +310,7 @@ class MyHashMap {
 
         bool doLookup(unsigned long slot, const KeyType& key, ValueType* value)
         {
-            std::list<std::pair<KeyType, ValueType>>& itemlist = m_table[slot].itemlist;
+            std::list<std::pair<const KeyType, ValueType>>& itemlist = m_table[slot].itemlist;
 
             for (auto i = itemlist.begin(); i != itemlist.end(); ++i) {
                 if (equal(key, i->first)) {
@@ -368,7 +368,7 @@ class MyHashMap {
 
         struct HashHead {
             LockType lock;
-            std::list<std::pair<KeyType, ValueType>> itemlist;
+            std::list<std::pair<const KeyType, ValueType>> itemlist;
         };
 
     private:

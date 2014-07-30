@@ -11,7 +11,7 @@ class NumHashMap : public MyHashMap<int, int, MyPthreadSpinLock> {
     public:
 
         NumHashMap()
-            : MyHashMap<int, int, MyPthreadSpinLock>(11)
+            : MyHashMap<int, int, MyPthreadSpinLock>(7)
         {}
 
     protected:
@@ -20,13 +20,18 @@ class NumHashMap : public MyHashMap<int, int, MyPthreadSpinLock> {
         bool equal(const int& a, const int& b) const { return (a == b); }
 };
 
-class TestIterator : public NumHashMap::Iterator {
+class TestIterator : public NumHashMap::SlotIterator {
 
     public:
 
-        bool process(const int& key, int& value)
+        bool process(unsigned int slot,
+                     list<pair<const int, int>>& itemlist)
         {
-            cout << "get " << key << ":" << value << endl;
+            cout << slot << " ->";
+            for (auto x = itemlist.begin(); x != itemlist.end(); ++x)
+                 cout << " (" << x->first << ", " << x->second << ")";
+            cout << endl;
+
             return true;
         }
 };
