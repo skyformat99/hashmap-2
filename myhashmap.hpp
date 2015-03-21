@@ -5,6 +5,7 @@
 #include <vector>
 #include <utility> // std::pair
 #include <pthread.h>
+#include <functional>
 
 #define MAX_NR_SLOT 999983
 
@@ -36,7 +37,7 @@ class MyPthreadRWLock : public MyHashLock {
 
         MyPthreadRWLock()
         {
-            pthread_rwlock_init(&m_lock, NULL);
+            pthread_rwlock_init(&m_lock, nullptr);
         }
 
         ~MyPthreadRWLock()
@@ -75,7 +76,7 @@ class MyPthreadMutexLock : public MyHashLock {
 
         MyPthreadMutexLock()
         {
-            pthread_mutex_init(&m_lock, NULL);
+            pthread_mutex_init(&m_lock, nullptr);
         }
 
         ~MyPthreadMutexLock()
@@ -194,7 +195,17 @@ class MyHashMap {
             return doInsert(slot, key, value, replace);
         }
 
-        bool remove(const KeyType& key, ValueType* value = NULL)
+        template<typename T>
+        bool insert(const KeyType& key, const T& value,
+                    bool (*func)(ValueType* valuelist, const T& value))
+        {
+            unsigned int slot = hash(key) % m_slots;
+
+            WRLock lock(&(m_table[slot].lock));
+            return doInsert(slot, key, value, func);
+        }
+
+        bool remove(const KeyType& key, ValueType* value = nullptr)
         {
             unsigned int slot = hash(key) % m_slots;
 
@@ -202,7 +213,7 @@ class MyHashMap {
             return doRemove(slot, key, value);
         }
 
-        bool lookup(const KeyType& key, ValueType* value = NULL)
+        bool lookup(const KeyType& key, ValueType* value = nullptr)
         {
             unsigned int slot = hash(key) % m_slots;
 
@@ -210,22 +221,15 @@ class MyHashMap {
             return doLookup(slot, key, value);
         }
 
-        void clear()
-        {
-            for (auto i = m_table.begin(); i != m_table.end(); ++i) {
-                WRLock lock(&(i->lock));
-                i->itemlist.clear();
-            }
-        }
-
-        bool clear(SlotIterator& o)
+        bool clear(const std::function<bool (unsigned int slot,
+                                             std::list<std::pair<const KeyType, ValueType>>& itemlist)>& func)
         {
             for (unsigned int i = 0; i < m_table.size(); ++i) {
                 HashHead& head = m_table[i];
 
                 if (!head.itemlist.empty()) {
                     WRLock lock(&(head.lock));
-                    if (!o.process(i, head.itemlist))
+                    if (!func(i, head.itemlist))
                         return false;
 
                     head.itemlist.clear();
@@ -235,12 +239,59 @@ class MyHashMap {
             return true;
         }
 
-        bool foreach(Iterator& o)
+        void clear(const std::function<bool (const KeyType& key, const ValueType& value)>& func)
         {
-            for (auto i = m_table.begin(); i != m_table.end(); ++i) {
-                RDLock lock(&(i->lock));
-                for (auto j = i->itemlist.begin(); j != i->itemlist.end(); ++j) {
-                    if (!o.process(j->first, j->second))
+            auto lambda = [&func] (unsigned int slot,
+                                   std::list<std::pair<const KeyType, ValueType>>& itemlist) -> bool {
+                for (auto o = itemlist.begin(); o != itemlist.end(); ++o) {
+                    if (!func(o->first, o->second))
+                        return false;
+                }
+
+                return true;
+            };
+
+            return clear(lambda);
+        }
+
+        void clear()
+        {
+            auto dummy = [] (unsigned int slot,
+                             std::list<std::pair<const KeyType, ValueType>>& itemlist) -> bool {
+                return true;
+            };
+
+            clear(dummy);
+        }
+
+        bool clear(Iterator& o)
+        {
+            auto func = [&o] (const KeyType& key, const ValueType& value) -> bool {
+                return o.process(key, value);
+            };
+
+            return clear(func);
+        }
+
+        bool clear(SlotIterator& o)
+        {
+            auto func = [&o] (unsigned int slot,
+                              std::list<std::pair<const KeyType, ValueType>>& itemlist) -> bool {
+                return o.process(slot, itemlist);
+            };
+
+            return clear(func);
+        }
+
+        bool foreach(const std::function<bool (unsigned int slot,
+                                               std::list<std::pair<const KeyType, ValueType>>& itemlist)>& func)
+        {
+            for (unsigned int i = 0; i < m_table.size(); ++i) {
+                HashHead& head = m_table[i];
+
+                if (!head.itemlist.empty()) {
+                    RDLock lock(&(head.lock));
+                    if (!func(i, head.itemlist))
                         return false;
                 }
             }
@@ -250,17 +301,37 @@ class MyHashMap {
 
         bool foreach(SlotIterator& o)
         {
-            for (unsigned int i = 0; i < m_table.size(); ++i) {
-                HashHead& head = m_table[i];
+            auto func = [&o] (unsigned int slot,
+                              std::list<std::pair<const KeyType, ValueType>>& itemlist) -> bool {
+                return o.process(slot, itemlist);
+            };
 
-                if (!head.itemlist.empty()) {
-                    RDLock lock(&(head.lock));
-                    if (!o.process(i, head.itemlist))
+            return foreach(func);
+        }
+
+        bool foreach(const std::function<bool (const KeyType& key,
+                                               const ValueType& value)>& func)
+        {
+            auto lambda = [&func] (unsigned int slot,
+                                   std::list<std::pair<const KeyType, ValueType>>& itemlist) -> bool {
+                for (auto o = itemlist.begin(); o != itemlist.end(); ++o) {
+                    if (!func(o->first, o->second))
                         return false;
                 }
-            }
 
-            return true;
+                return true;
+            };
+
+            return foreach(lambda);
+        }
+
+        bool foreach(Iterator& o)
+        {
+            auto func = [&o] (const KeyType& key, const ValueType& value) -> bool {
+                return o.process(key, value);
+            };
+
+            return foreach(func);
         }
 
     protected:
@@ -288,6 +359,27 @@ class MyHashMap {
             itemlist.push_front(std::pair<KeyType, ValueType>(key, value));
             __sync_add_and_fetch(&m_items, 1);
             return true;
+        }
+
+        template<typename T>
+        bool doInsert(unsigned long slot, const KeyType& key, const T& value,
+                      bool (*func)(ValueType* valuelist, const T& value))
+        {
+            std::list<std::pair<KeyType, ValueType>>& itemlist = m_table[slot].itemlist;
+
+            for (auto i = itemlist.begin(); i != itemlist.end(); ++i) {
+                if (equal(key, i->first))
+                    return func(&i->second, value);
+            }
+
+            ValueType valuelist;
+            bool ok = func(&valuelist, value);
+            if (ok) {
+                itemlist.push_front(std::pair<KeyType, ValueType>(key, valuelist));
+                __sync_add_and_fetch(&m_items, 1);
+            }
+
+            return ok;
         }
 
         bool doRemove(unsigned long slot, const KeyType& key, ValueType* value)
