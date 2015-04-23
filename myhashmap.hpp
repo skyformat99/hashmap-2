@@ -232,6 +232,7 @@ class MyHashMap {
                     if (!func(i, head.itemlist))
                         return false;
 
+                    __sync_sub_and_fetch(&m_items, head.itemlist.size());
                     head.itemlist.clear();
                 }
             }
