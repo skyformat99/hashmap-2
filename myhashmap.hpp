@@ -2,7 +2,6 @@
 #define __MYHASHMAP_HPP__
 
 #include <list>
-#include <vector>
 #include <utility> // std::pair
 #include <pthread.h>
 #include <functional>
@@ -176,11 +175,13 @@ class MyHashMap {
         {
             m_items = 0;
             m_slots = (slots > 0) ? slots : MAX_NR_SLOT;
-
-            m_table.resize(m_slots);
+            m_table = new HashHead [m_slots];
         }
 
-        virtual ~MyHashMap() {}
+        virtual ~MyHashMap()
+        {
+            delete [] m_table;
+        }
 
         unsigned long size() const { return m_items; }
 
@@ -224,7 +225,7 @@ class MyHashMap {
         bool clear(const std::function<bool (unsigned int slot,
                                              std::list<std::pair<const KeyType, ValueType>>& itemlist)>& func)
         {
-            for (unsigned int i = 0; i < m_table.size(); ++i) {
+            for (unsigned int i = 0; i < m_slots; ++i) {
                 HashHead& head = m_table[i];
 
                 if (!head.itemlist.empty()) {
@@ -287,7 +288,7 @@ class MyHashMap {
         bool foreach(const std::function<bool (unsigned int slot,
                                                std::list<std::pair<const KeyType, ValueType>>& itemlist)>& func)
         {
-            for (unsigned int i = 0; i < m_table.size(); ++i) {
+            for (unsigned int i = 0; i < m_slots; ++i) {
                 HashHead& head = m_table[i];
 
                 if (!head.itemlist.empty()) {
@@ -468,7 +469,7 @@ class MyHashMap {
 
         unsigned long m_items;
         unsigned int m_slots;
-        std::vector<HashHead> m_table;
+        HashHead* m_table;
 };
 
 }
