@@ -222,7 +222,7 @@ class MyHashMap {
             return doLookup(slot, key, value);
         }
 
-        bool clear(const std::function<bool (unsigned int slot,
+        void clear(const std::function<bool (unsigned int slot,
                                              std::list<std::pair<const KeyType, ValueType>>& itemlist)>& func)
         {
             for (unsigned int i = 0; i < m_slots; ++i) {
@@ -230,15 +230,11 @@ class MyHashMap {
 
                 if (!head.itemlist.empty()) {
                     WRLock lock(&(head.lock));
-                    if (!func(i, head.itemlist))
-                        return false;
-
+                    func(i, head.itemlist);
                     __sync_sub_and_fetch(&m_items, head.itemlist.size());
                     head.itemlist.clear();
                 }
             }
-
-            return true;
         }
 
         void clear(const std::function<bool (const KeyType& key, const ValueType& value)>& func)
@@ -253,7 +249,7 @@ class MyHashMap {
                 return true;
             };
 
-            return clear(lambda);
+            clear(lambda);
         }
 
         void clear()
@@ -266,23 +262,23 @@ class MyHashMap {
             clear(dummy);
         }
 
-        bool clear(Iterator& o)
+        void clear(Iterator& o)
         {
             auto func = [&o] (const KeyType& key, const ValueType& value) -> bool {
                 return o.process(key, value);
             };
 
-            return clear(func);
+            clear(func);
         }
 
-        bool clear(SlotIterator& o)
+        void clear(SlotIterator& o)
         {
             auto func = [&o] (unsigned int slot,
                               std::list<std::pair<const KeyType, ValueType>>& itemlist) -> bool {
                 return o.process(slot, itemlist);
             };
 
-            return clear(func);
+            clear(func);
         }
 
         bool foreach(const std::function<bool (unsigned int slot,
