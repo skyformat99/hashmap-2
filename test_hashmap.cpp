@@ -1,17 +1,17 @@
 #include <iostream>
 using namespace std;
 
-#include "myhashmap.hpp"
-using namespace myutils;
+#include "hashmap.hpp"
+using namespace utils;
 
 /* ------------------------------------------------------------------------- */
 
-class NumHashMap : public MyHashMap<int, int, MyPthreadSpinLock> {
+class NumHashMap : public HashMap<int, int, PthreadSpinLock> {
 
     public:
 
         NumHashMap()
-            : MyHashMap<int, int, MyPthreadSpinLock>(7)
+            : HashMap<int, int, PthreadSpinLock>(7)
         {}
 
     protected:
@@ -29,7 +29,7 @@ class TestIterator : public NumHashMap::SlotIterator {
         {
             cout << slot << " ->";
             for (auto x = itemlist.begin(); x != itemlist.end(); ++x)
-                 cout << " (" << x->first << ", " << x->second << ")";
+                cout << " (" << x->first << ", " << x->second << ")";
             cout << endl;
 
             return true;

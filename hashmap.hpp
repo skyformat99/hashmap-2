@@ -1,5 +1,5 @@
-#ifndef __MYHASHMAP_HPP__
-#define __MYHASHMAP_HPP__
+#ifndef __HASHMAP_HPP__
+#define __HASHMAP_HPP__
 
 #include <list>
 #include <utility> // std::pair
@@ -8,9 +8,9 @@
 
 #define MAX_NR_SLOT 999983
 
-namespace myutils {
+namespace utils {
 
-class MyHashLock {
+class HashLock {
 
     public:
 
@@ -20,7 +20,7 @@ class MyHashLock {
         virtual void wr_unlock() = 0;
 };
 
-class MyDummyHashLock : public MyHashLock {
+class DummyHashLock : public HashLock {
 
     public:
 
@@ -30,16 +30,16 @@ class MyDummyHashLock : public MyHashLock {
         void wr_unlock() {}
 };
 
-class MyPthreadRWLock : public MyHashLock {
+class PthreadRWLock : public HashLock {
 
     public:
 
-        MyPthreadRWLock()
+        PthreadRWLock()
         {
             pthread_rwlock_init(&m_lock, nullptr);
         }
 
-        ~MyPthreadRWLock()
+        ~PthreadRWLock()
         {
             pthread_rwlock_destroy(&m_lock);
         }
@@ -69,16 +69,16 @@ class MyPthreadRWLock : public MyHashLock {
         pthread_rwlock_t m_lock;
 };
 
-class MyPthreadMutexLock : public MyHashLock {
+class PthreadMutexLock : public HashLock {
 
     public:
 
-        MyPthreadMutexLock()
+        PthreadMutexLock()
         {
             pthread_mutex_init(&m_lock, nullptr);
         }
 
-        ~MyPthreadMutexLock()
+        ~PthreadMutexLock()
         {
             pthread_mutex_destroy(&m_lock);
         }
@@ -108,16 +108,16 @@ class MyPthreadMutexLock : public MyHashLock {
         pthread_mutex_t m_lock;
 };
 
-class MyPthreadSpinLock : public MyHashLock {
+class PthreadSpinLock : public HashLock {
 
     public:
 
-        MyPthreadSpinLock()
+        PthreadSpinLock()
         {
             pthread_spin_init(&m_lock, PTHREAD_PROCESS_PRIVATE);
         }
 
-        ~MyPthreadSpinLock()
+        ~PthreadSpinLock()
         {
             pthread_spin_destroy(&m_lock);
         }
@@ -149,8 +149,8 @@ class MyPthreadSpinLock : public MyHashLock {
 
 /* ------------------------------------------------------------------------- */
 
-template<typename KeyType, typename ValueType, typename LockType = MyDummyHashLock>
-class MyHashMap {
+template<typename KeyType, typename ValueType, typename LockType = DummyHashLock>
+class HashMap {
 
     public:
 
@@ -171,14 +171,14 @@ class MyHashMap {
 
     public:
 
-        MyHashMap(unsigned int slots = 0)
+        HashMap(unsigned int slots = 0)
         {
             m_items = 0;
             m_slots = (slots > 0) ? slots : MAX_NR_SLOT;
             m_table = new HashHead [m_slots];
         }
 
-        virtual ~MyHashMap()
+        virtual ~HashMap()
         {
             delete [] m_table;
         }
