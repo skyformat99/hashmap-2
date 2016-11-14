@@ -154,23 +154,6 @@ class HashMap {
 
     public:
 
-        class Iterator {
-
-            public:
-
-                virtual bool process(const KeyType&, ValueType&) = 0;
-        };
-
-        class SlotIterator {
-
-            public:
-
-                virtual bool process(unsigned int slot,
-                                     std::list<std::pair<const KeyType, ValueType>>& itemlist) = 0;
-        };
-
-    public:
-
         HashMap(unsigned int slots = 0)
         {
             m_items = 0;
@@ -262,25 +245,6 @@ class HashMap {
             clear(dummy);
         }
 
-        void clear(Iterator& o)
-        {
-            auto func = [&o] (const KeyType& key, const ValueType& value) -> bool {
-                return o.process(key, value);
-            };
-
-            clear(func);
-        }
-
-        void clear(SlotIterator& o)
-        {
-            auto func = [&o] (unsigned int slot,
-                              std::list<std::pair<const KeyType, ValueType>>& itemlist) -> bool {
-                return o.process(slot, itemlist);
-            };
-
-            clear(func);
-        }
-
         bool foreach(const std::function<bool (unsigned int slot,
                                                std::list<std::pair<const KeyType, ValueType>>& itemlist)>& func)
         {
@@ -297,16 +261,6 @@ class HashMap {
             return true;
         }
 
-        bool foreach(SlotIterator& o)
-        {
-            auto func = [&o] (unsigned int slot,
-                              std::list<std::pair<const KeyType, ValueType>>& itemlist) -> bool {
-                return o.process(slot, itemlist);
-            };
-
-            return foreach(func);
-        }
-
         bool foreach(const std::function<bool (const KeyType& key,
                                                const ValueType& value)>& func)
         {
@@ -321,15 +275,6 @@ class HashMap {
             };
 
             return foreach(lambda);
-        }
-
-        bool foreach(Iterator& o)
-        {
-            auto func = [&o] (const KeyType& key, const ValueType& value) -> bool {
-                return o.process(key, value);
-            };
-
-            return foreach(func);
         }
 
     protected:

@@ -20,22 +20,6 @@ class NumHashMap : public HashMap<int, int, PthreadSpinLock> {
         bool equal(const int& a, const int& b) const { return (a == b); }
 };
 
-class TestIterator : public NumHashMap::SlotIterator {
-
-    public:
-
-        bool process(unsigned int slot,
-                     list<pair<const int, int>>& itemlist)
-        {
-            cout << slot << " ->";
-            for (auto x = itemlist.begin(); x != itemlist.end(); ++x)
-                cout << " (" << x->first << ", " << x->second << ")";
-            cout << endl;
-
-            return true;
-        }
-};
-
 /* ------------------------------------------------------------------------- */
 
 int main(void)
@@ -57,8 +41,17 @@ int main(void)
         cout << "find -> " << value << endl;
     }
 
-    TestIterator iter;
-    m.foreach(iter);
+
+    auto processor = [] (unsigned int slot,
+                         list<pair<const int, int>>& itemlist) -> bool {
+        cout << slot << " ->";
+        for (auto x = itemlist.begin(); x != itemlist.end(); ++x)
+            cout << " (" << x->first << ", " << x->second << ")";
+        cout << endl;
+
+        return true;
+    };
+    m.foreach(processor);
 
     return 0;
 }
